@@ -1,27 +1,133 @@
-# Mobile AI Coding Agent (Android-Only Antigravity CLI Wrapper) - Technical Specification
+# Technical Specification: Mobile AI Coding Agent (Antigravity Mobile)
 
-## 1. Core Architecture & Android Feasibility
-- **Target Platform:** Android (ARM64 architecture).
-- **Zero External Servers:** The entire backend execution logic runs locally on the user's device.
-- **Embedded Runtime:** A lightweight Node.js runtime and the Antigravity CLI binaries are bundled directly within the Flutter app's assets. Upon application startup, a local background service initializes the Node.js environment via IPC (Inter-Process Communication) or a local private port.
+**Status:** Ready for Review  
+**Target Platform:** Android (ARM64)  
+**Architecture:** Local Embedded Runtime + Flutter Frontend  
 
-## 2. User Authentication
-- **Google Account OAuth:** At first launch/app setup, the user authenticates using the Google account tied to their active Antigravity plan.
-- **Quota Management:** Ensures all requests leverage the user's personal Antigravity CLI quota and model access permissions.
+---
 
-## 3. Repository Management
-- **GitHub Integration:** The Flutter frontend integrates with the GitHub REST API.
-- **Repository Setup:** Users provide a link to their public GitHub repository. The app fetches repository structures, enabling target code selection without requiring a local Git terminal.
+## 1. Executive Summary
+Antigravity Mobile is an autonomous on-device AI coding agent application running on Android. The application embeds a local Node.js runtime and the Antigravity CLI binary directly into the Flutter application sandbox, eliminating dependency on external backend servers for execution. All code generation, workspace manipulation, and local process orchestration occur strictly on-device, authenticated via the user's Google account tied to their Antigravity tier.
 
-## 4. Execution & Chat Interface
-- **Local Communication:** The UI communicates via WebSockets or local loopback HTTP with the embedded, running Node.js server inside the Android app package.
-- **Automated First Prompt:** Upon loading a repository link, the app automatically triggers an initial setup prompt sent behind the scenes to the local Antigravity CLI process.
+---
 
-## 5. Structured Output Processing
-- **Concise Responses:** Every prompt instructs the local CLI to return a concise summary and standardized JSON containing file diffs and modification statuses.
-- **UI Rendering:** The chat interface parses this structured response to display clear, readable updates of what changes were made in the user's project directly on mobile.
+## 2. Architecture & On-Device Runtime Execution
 
-## 6. Tech Stack
-- **Frontend:** Flutter (Latest Stable)
-- **Local Backend:** Embedded Node.js & V8 Runtime for Android (bundled via mobile bridge package)
-- **API/Integration:** GitHub REST API, Local IPC / WebSocket communication
+### 2.1 Core Architectural Principles
+* **Zero External Application Servers:** Execution logic, IPC management, and workspace tooling run locally on the user's Android device.
+* **Architecture Target:** Exclusively optimized for Android ARM64 (`aarch64`).
+* **Process Sandboxing:** All operations are constrained within the application's private app-storage sandbox (`/data/data/<package>/files/`).
+
+### 2.2 Embedded Runtime Architecture
+```
++-------------------------------------------------------------+
+|                     Flutter UI (Dart)                       |
+|   - Chat Interface         - GitHub Repository Explorer     |
+|   - Diff Visualizer        - State Management (Riverpod)    |
++------------------------------+------------------------------+
+                               | (Localhost WebSocket / IPC)
++------------------------------v------------------------------+
+|             Embedded Runtime (Android ARM64)                |
+|   - Lightweight Node.js / V8 Engine Wrapper                 |
+|   - Antigravity CLI Binaries (Bundled in App Assets)        |
+|   - Local Tooling (File I/O, Git Diffs, Tree Traversal)      |
++-------------------------------------------------------------+
+```
+
+### 2.3 Asset Unpacking & Runtime Bootstrapping
+1. **Asset Staging:** On initial launch or app version upgrade, bundled runtime binaries (`assets/bin/*` and `assets/runtime/*`) are unpacked into `getApplicationDocumentsDirectory()` / `files/usr/`.
+2. **Permission Setup:** Mark binaries executable using POSIX file permission flags (`chmod 700`).
+3. **Daemon Initialization:** Launch the embedded Node.js process listening on a randomized localhost loopback port with an ephemeral authentication token.
+4. **Heartbeat & Healthchecks:** Flutter monitors process health; crashes trigger automated clean restarts and state recovery.
+
+---
+
+## 3. User Authentication & Quota Management
+
+### 3.1 Authentication Workflow
+* **Provider:** Google Identity Services (OAuth 2.0 with PKCE).
+* **Scope:** Authenticate using the Google account registered with the user's active Antigravity subscription plan.
+* **Credential Persistence:** OAuth access tokens, refresh tokens, and session keys are secured using Android KeyStore via `flutter_secure_storage`.
+
+### 3.2 Quota & Entitlement Control
+* Requests dispatched through the local Antigravity CLI process inherit the authenticated user credentials.
+* Rate limits, model access tiers, and token quotas are validated directly against Antigravity plan entitlements without intermediary proxy servers.
+
+---
+
+## 4. Repository Management & Workspace Isolation
+
+### 4.1 GitHub REST API Integration
+* **Repository Setup:** Users input a public GitHub repository link (or grant read access for private repositories).
+* **Tree Ingestion:** Fetches git tree hierarchies, branches, and file blobs directly using the GitHub REST API (`/repos/{owner}/{repo}/git/trees`).
+* **Virtual Working Tree:** Downloaded source files are populated into a dedicated isolated workspace directory on local storage for agent inspection.
+
+### 4.2 Workspace Manipulation
+* File modifications are applied directly within the local workspace sandbox.
+* Changes are tracked via unified git diff formatting before the user decides to push, stage, or export.
+
+---
+
+## 5. Execution, IPC & Chat Interface
+
+### 5.1 Communication Protocol
+* **Channel:** Local WebSocket connection over `127.0.0.1:<ephemeral-port>`.
+* **Payload Serialization:** Strict JSON-RPC style framing for bidirectional tool calling and status streaming.
+
+### 5.2 Automated Session Initialization
+* Upon linking a repository, the client emits an automated bootstrap prompt instructing the agent to index the project directory, identify build systems (e.g., `pubspec.yaml`, `package.json`), and prepare the contextual memory graph.
+
+### 5.3 Structured Response & Diff Protocol
+Every response emitted by the CLI adheres to structured JSON schemas:
+```json
+{
+  "summary": "Added pubspec dependencies and configured secure storage.",
+  "status": "success",
+  "files_modified": [
+    {
+      "path": "pubspec.yaml",
+      "action": "modify",
+      "diff": "@@ -10,3 +10,6 @@\n+  flutter_riverpod: ^2.5.1\n+  dio: ^5.4.3+1"
+    }
+  ]
+}
+```
+
+### 5.4 UI Rendering
+* **Chat Stream:** Markdown-rendered explanations (`flutter_markdown`) with progress indicators for on-device operations.
+* **Diff Viewer:** Interactive file diff previews with syntax highlighting (`flutter_highlight`) allowing users to review and accept individual chunk changes.
+
+---
+
+## 6. Tech Stack & Dependencies
+
+| Category | Technology / Package | Purpose |
+| :--- | :--- | :--- |
+| **Frontend Framework** | Flutter (Dart >=3.3.0) | Cross-platform UI toolkit optimized for Android |
+| **State Management** | `flutter_riverpod` | Reactive state management and lifecycle control |
+| **Runtime & Process** | `path_provider`, `process_run` | Binary extraction and local process execution |
+| **Authentication** | `google_sign_in`, `flutter_secure_storage` | Google OAuth and KeyStore token persistence |
+| **Networking & IPC** | `dio`, `web_socket_channel` | GitHub REST client and local runtime IPC |
+| **Rendering** | `flutter_markdown`, `flutter_highlight` | Agent chat formatting and syntax-highlighted diffs |
+| **Code Generation** | `build_runner`, `json_serializable` | Type-safe JSON serialization/deserialization |
+
+---
+
+## 7. Security, Sandboxing & Android Considerations
+
+1. **Local Loopback Only:** IPC listener binds strictly to `127.0.0.1` or Unix domain sockets with an ephemeral bearer token; external network interfaces are prohibited from connecting.
+2. **Storage Sandboxing:** Working directories reside exclusively within `Context.getFilesDir()`. No external SD-card access is required (`MANAGE_EXTERNAL_STORAGE` is NOT used).
+3. **Memory & Battery Protection:**
+   * Node.js V8 heap capped to respect Android Low Memory Killer (LMK) thresholds (`--max-old-space-size=512`).
+   * Background process enters suspended/sleep mode when the app is paused or in background unless actively running an agent session.
+
+---
+
+## 8. PR Checklist & Verification Steps
+
+- [ ] **Binary Compatibility:** Verify Node.js ARM64 binary executes cleanly on physical devices (Android 10+ / API 29+).
+- [ ] **Asset Extraction:** Ensure extraction logic handles cold starts, app updates, and storage eviction without orphaned files.
+- [ ] **OAuth Authentication:** Validate Google Sign-In sign-up and silent token refresh cycle.
+- [ ] **IPC Resilience:** Test client reconnection and graceful fallback if the local daemon process terminates unexpectedly.
+- [ ] **Diff Rendering:** Validate unified diff parser with multi-file additions, modifications, and deletions.
+- [ ] **Lint & Tests:** Pass `flutter analyze` and `flutter test`.

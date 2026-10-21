@@ -1,0 +1,53 @@
+name: antigravity_mobile
+description: "Mobile AI Coding Agent - Android-Only Antigravity CLI Wrapper"
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Icons & Styling
+  cupertino_icons: ^1.0.8
+
+  # State Management & Dependency Injection
+  flutter_riverpod: ^2.5.1
+
+  # Embedded Runtime, File System & Process Execution
+  path_provider: ^2.1.2
+  process_run: ^0.13.0
+
+  # Authentication & Secure Credential Storage
+  google_sign_in: ^6.2.1
+  flutter_secure_storage: ^9.0.0
+
+  # Network Communication, GitHub API & Local IPC
+  dio: ^5.4.3+1
+  web_socket_channel: ^2.4.5
+
+  # Chat Stream & Structured Diff UI
+  flutter_markdown: ^0.7.1
+  flutter_highlight: ^0.7.0
+
+  # Serialization
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.2
+  build_runner: ^2.4.9
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+
+  # Embedded Node.js runtime and Antigravity CLI binary assets
+  assets:
+    - assets/bin/
+    - assets/runtime/

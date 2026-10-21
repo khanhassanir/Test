@@ -1,27 +1,27 @@
-# Mobile AI Coding Agent (Android-Only Antigravity CLI Wrapper) - Technical Specification
+# Mobile AI Coding Agent - Project Plan
 
-## 1. Core Architecture & Android Feasibility
-- **Target Platform:** Android (ARM64 architecture).
-- **Zero External Servers:** The entire backend execution logic runs locally on the user's device.
-- **Embedded Runtime:** A lightweight Node.js runtime and the Antigravity CLI binaries are bundled directly within the Flutter app's assets. Upon application startup, a local background service initializes the Node.js environment via IPC (Inter-Process Communication) or a local private port.
+## 1. What This App Does
+- **Runs on Your Phone:** An AI coding assistant made for Android phones and tablets.
+- **No Outside Servers:** Everything runs directly on your device.
+- **Ready to Go:** Comes with everything built inside, so you do not need to install extra tools.
 
-## 2. User Authentication
-- **Google Account OAuth:** At first launch/app setup, the user authenticates using the Google account tied to their active Antigravity plan.
-- **Quota Management:** Ensures all requests leverage the user's personal Antigravity CLI quota and model access permissions.
+## 2. Accounts & Login
+- **Google Account:** Sign in to use your Antigravity AI plan and limits.
+- **GitHub Account:** Sign in so the app can open your code and save changes back.
 
-## 3. Repository Management
-- **GitHub Integration:** The Flutter frontend integrates with the GitHub REST API.
-- **Repository Setup:** Users provide a link to their public GitHub repository. The app fetches repository structures, enabling target code selection without requiring a local Git terminal.
+## 3. Opening Your Code
+- **Pick a Project:** Paste a link to a GitHub repository or pick one from your account.
+- **No Git Setup Needed:** The app downloads the project files for you without needing command-line tools.
 
-## 4. Execution & Chat Interface
-- **Local Communication:** The UI communicates via WebSockets or local loopback HTTP with the embedded, running Node.js server inside the Android app package.
-- **Automated First Prompt:** Upon loading a repository link, the app automatically triggers an initial setup prompt sent behind the scenes to the local Antigravity CLI process.
+## 4. Chatting & Editing
+- **Talk to the AI:** Ask the AI to write, edit, or fix code in a simple chat window.
+- **Works Automatically:** Starts setting up the project the moment you open it.
 
-## 5. Structured Output Processing
-- **Concise Responses:** Every prompt instructs the local CLI to return a concise summary and standardized JSON containing file diffs and modification statuses.
-- **UI Rendering:** The chat interface parses this structured response to display clear, readable updates of what changes were made in the user's project directly on mobile.
+## 5. Seeing Changes & Sending to Git
+- **Clear Previews:** See an easy list of all files created, changed, or deleted.
+- **Send Changes to Git:** Tap one button to send your updates straight back to GitHub as a commit or new branch.
 
-## 6. Tech Stack
-- **Frontend:** Flutter (Latest Stable)
-- **Local Backend:** Embedded Node.js & V8 Runtime for Android (bundled via mobile bridge package)
-- **API/Integration:** GitHub REST API, Local IPC / WebSocket communication
+## 6. What Powers It
+- **App Screen:** Built with Flutter for a smooth mobile experience.
+- **Local Engine:** Built-in engine that runs directly inside the Android app.
+- **GitHub Connection:** Direct connection to download your code and send your changes back.
